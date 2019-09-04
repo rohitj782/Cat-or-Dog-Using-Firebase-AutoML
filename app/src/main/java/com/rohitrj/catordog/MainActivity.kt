@@ -2,30 +2,84 @@ package com.rohitrj.catordog
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.AssetManager
+import android.graphics.Bitmap
 import android.graphics.Matrix
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
 import android.util.Log
 import android.util.Rational
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.camera.core.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LifecycleOwner
 import com.google.android.material.appbar.CollapsingToolbarLayout
-import java.io.File
+import com.google.firebase.ml.common.FirebaseMLException
+import com.google.firebase.ml.common.modeldownload.FirebaseLocalModel
+import com.google.firebase.ml.common.modeldownload.FirebaseModelDownloadConditions
+import com.google.firebase.ml.common.modeldownload.FirebaseModelManager
+import com.google.firebase.ml.common.modeldownload.FirebaseRemoteModel
+import com.google.firebase.ml.custom.*
+import kotlinx.android.synthetic.main.activity_main.*
+import java.io.IOException
+import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.experimental.and
+import kotlin.math.abs
 
 
 private const val REQUEST_CODE_PERMISSIONS = 10
 private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+
+val TAG = "MainActivity"
+lateinit var mSelectedImage: Bitmap
+lateinit var mGraphicOverlay: GraphicOverlay
+// Max width (portrait mode)
+var mImageMaxWidth: Int? = null
+// Max height (portrait mode)
+var mImageMaxHeight: Int? = null
+/**
+ * An instance of the driver class to run model inference with Firebase.
+ */
+var mInterpreter: FirebaseModelInterpreter? = null
+/**
+ * Data configuration of input & output data of model.
+ */
+lateinit var mDataOptions: FirebaseModelInputOutputOptions
+/**
+ * Name of the model file hosted with Firebase.
+ */
+private val HOSTED_MODEL_NAME = "cat_or_dog"
+private val LOCAL_MODEL_ASSET = "cat_or_dog.tflite"
+/**
+ * Name of the label file stored in Assets.
+ */
+private val LABEL_PATH = "labels.txt"
+/**
+ * Number of results to show in the UI.
+ */
+private val RESULTS_TO_SHOW = 1
+/**
+ * Dimensions of inputs.
+ */
+private val DIM_BATCH_SIZE = 1
+private val DIM_PIXEL_SIZE = 3
+private val DIM_IMG_SIZE_X = 400
+private val DIM_IMG_SIZE_Y = 400
+/**
+ * Labels corresponding to the output of the vision model.
+ */
+
+private var mLabelList: List<String>? = null
+private val intValues = IntArray(DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y)
 
 
 class MainActivity : AppCompatActivity() {
@@ -39,6 +93,8 @@ class MainActivity : AppCompatActivity() {
         collapsingToolbar.title = "Cat Vs Dog"
 
         viewFinder = findViewById(R.id.camera_view)
+        mGraphicOverlay = findViewById(R.id.graphicOverlay)
+
 
         // Request camera permissions
         if (allPermissionsGranted()) {
@@ -54,6 +110,12 @@ class MainActivity : AppCompatActivity() {
             updateTransform()
         }
 
+        initCustomModel()
+
+        camera_view.setOnClickListener {
+
+            mSelectedImage = camera_view.bitmap
+            runModelInference() }
     }
 
     private lateinit var viewFinder: TextureView
@@ -133,5 +195,170 @@ class MainActivity : AppCompatActivity() {
             baseContext, it
         ) == PackageManager.PERMISSION_GRANTED
     }
+
+
+    private fun initCustomModel() {
+
+        mLabelList = loadLabelList()
+        val inputDims = intArrayOf(DIM_BATCH_SIZE, DIM_IMG_SIZE_X, DIM_IMG_SIZE_Y, DIM_PIXEL_SIZE)
+        val outputDims = intArrayOf(DIM_BATCH_SIZE, mLabelList!!.size)
+
+        try {
+            mDataOptions = FirebaseModelInputOutputOptions.Builder()
+                .setInputFormat(0, FirebaseModelDataType.BYTE, inputDims)
+                .setOutputFormat(0, FirebaseModelDataType.BYTE, outputDims)
+                .build()
+
+            val conditions: FirebaseModelDownloadConditions = FirebaseModelDownloadConditions
+                .Builder()
+                .build()
+
+            val remoteModel: FirebaseRemoteModel = FirebaseRemoteModel.Builder(HOSTED_MODEL_NAME)
+                .enableModelUpdates(true)
+                .setInitialDownloadConditions(conditions)
+                .setUpdatesDownloadConditions(conditions)  // You could also specify
+                // different conditions
+                // for updates
+                .build()
+
+            val localModel: FirebaseLocalModel = FirebaseLocalModel.Builder("asset")
+                .setAssetFilePath(LOCAL_MODEL_ASSET).build()
+
+            val manager: FirebaseModelManager = FirebaseModelManager.getInstance()
+            manager.registerRemoteModel(remoteModel)
+            manager.registerLocalModel(localModel)
+
+            val modelOptions: FirebaseModelOptions = FirebaseModelOptions.Builder()
+                .setRemoteModelName(HOSTED_MODEL_NAME)
+                .setLocalModelName("asset")
+                .build()
+            mInterpreter = FirebaseModelInterpreter.getInstance(modelOptions)!!
+
+        } catch (e: FirebaseMLException) {
+            showToast("Error while setting up the model")
+            e.printStackTrace()
+        }
+
+    }
+
+    private fun runModelInference() {
+        mGraphicOverlay.clear()
+        if (mInterpreter == null) {
+            Log.e(TAG, "Image classifier has not been initialized; Skipped.")
+            return
+        }
+        // Create input data.
+        val imgData: ByteBuffer = convertBitmapToByteBuffer( mSelectedImage )
+
+        try {
+            val inputs: FirebaseModelInputs = FirebaseModelInputs.Builder()
+                .add(imgData).build()
+            // Here's where the magic happens!!
+            mInterpreter!!.run(inputs, mDataOptions)
+                .addOnFailureListener {
+                    it.printStackTrace()
+                    showToast("Error running model inference")
+                }
+                .continueWith {
+                    //                    Log.i(TAG,it.result!!.getOutput(0))
+                    val labelProbArray: Array<ByteArray> = it.result!!.getOutput(0)
+                    val topLabels: List<String> = getTopLabels(labelProbArray)
+                    val labelGraphic: GraphicOverlay.Graphic =
+                        LabelGraphic(mGraphicOverlay, topLabels)
+                    mGraphicOverlay.add(labelGraphic)
+                    return@continueWith topLabels
+                }
+        } catch (e: FirebaseMLException) {
+            e.printStackTrace()
+            showToast("Error  exception running model inference")
+        }
+
+
+    }
+
+    @Synchronized
+    private fun getTopLabels(labelProbArray: Array<ByteArray>): List<String> {
+
+        val result: ArrayList<String> = ArrayList<String>()
+
+        for (i in labelProbArray.indices){
+            Log.i("labels","${(labelProbArray[0][i] and 0xff.toByte()) /255.0f}" )
+            val prob = (labelProbArray[0][i] and 0xff.toByte()) /255.0f
+
+            if(prob<0){
+                result.add("CAT")
+            }else{
+                result.add("DOG")
+            }
+        }
+
+
+//        val catProb = (labelProbArray[0][0] and 0xff.toByte()) /255.0f
+//        val dogProb = (labelProbArray[0][1] and 0xff.toByte())/255.0f
+//        Log.i("labels","cat $catProb" )
+//        Log.i("labels","dog $dogProb" )
+
+        return result
+    }
+
+
+    /**
+     * Writes Image data into a `ByteBuffer`.
+     */
+    @Synchronized
+    private fun convertBitmapToByteBuffer(
+        bitmap: Bitmap
+    ): ByteBuffer {
+        val imgData = ByteBuffer.allocateDirect(
+            DIM_BATCH_SIZE * DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE
+        )
+        imgData.order(ByteOrder.nativeOrder())
+        val scaledBitmap = Bitmap.createScaledBitmap(
+            bitmap, DIM_IMG_SIZE_X, DIM_IMG_SIZE_Y,
+            true
+        )
+        imgData.rewind()
+        scaledBitmap.getPixels(
+            intValues, 0, scaledBitmap.width, 0, 0,
+            scaledBitmap.width, scaledBitmap.height
+        )
+        // Convert the image to int points.
+        var pixel = 0
+        for (i in 0 until DIM_IMG_SIZE_X) {
+            for (j in 0 until DIM_IMG_SIZE_Y) {
+                val `val` = intValues[pixel++]
+                imgData.put((`val` shr 16 and 0xFF).toByte())
+                imgData.put((`val` shr 8 and 0xFF).toByte())
+                imgData.put((`val` and 0xFF).toByte())
+            }
+        }
+        return imgData
+    }
+
+
+    private fun showToast(message: String) {
+        Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+    }
+    /**
+     * Reads label list from Assets.
+     */
+    private fun loadLabelList(): List<String> {
+        val labelList = ArrayList<String>()
+        val assetManager: AssetManager = resources.assets
+        val inputStream: InputStream?
+        try {
+            inputStream = assetManager.open(LABEL_PATH)
+            val s = Scanner(inputStream)
+            while(s.hasNext()){
+                labelList.add( s.nextLine() )
+            }
+
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return labelList
+    }
+
+
 
 }
