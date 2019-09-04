@@ -1,0 +1,159 @@
+{
+  "project_info": {
+    "project_number": "55795100979",
+    "firebase_url": "https://machine-learning-e56f8.firebaseio.com",
+    "project_id": "machine-learning-e56f8",
+    "storage_bucket": "machine-learning-e56f8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55795100979:android:2ff86fb29f978870",
+        "android_client_info": {
+          "package_name": "com.rohitrj.camerax"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "55795100979-cqpv31l3u22ntii5lgughb5u7lj5npbs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rohitrj.camerax",
+            "certificate_hash": "7777a0733c6bddd847b044cfe45ddf2d11efd68e"
+          }
+        },
+        {
+          "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdr73VOmS2cMgG4vyEVg8NQv63xrNlJkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55795100979:android:979b24da2b5f9fa7",
+        "android_client_info": {
+          "package_name": "com.rohitrj.catordog"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "55795100979-jalevvauje59l7tif8ii03f37ka92de1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rohitrj.catordog",
+            "certificate_hash": "7777a0733c6bddd847b044cfe45ddf2d11efd68e"
+          }
+        },
+        {
+          "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdr73VOmS2cMgG4vyEVg8NQv63xrNlJkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55795100979:android:b3cc14a25934aac1",
+        "android_client_info": {
+          "package_name": "com.rohitrj.mlkit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "55795100979-epsroj7ou6dk9lg7qfgtjq57p6ho6emm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rohitrj.mlkit",
+            "certificate_hash": "7777a0733c6bddd847b044cfe45ddf2d11efd68e"
+          }
+        },
+        {
+          "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdr73VOmS2cMgG4vyEVg8NQv63xrNlJkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55795100979:android:e67a41328e447244",
+        "android_client_info": {
+          "package_name": "com.rohitrj.objectdetection"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "55795100979-nhov9aoa0b8sn773oj47t86v190lutua.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rohitrj.objectdetection",
+            "certificate_hash": "7777a0733c6bddd847b044cfe45ddf2d11efd68e"
+          }
+        },
+        {
+          "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdr73VOmS2cMgG4vyEVg8NQv63xrNlJkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "55795100979-rbva0tf9j00ug2fkao3g3ahrqgrk7gqa.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
