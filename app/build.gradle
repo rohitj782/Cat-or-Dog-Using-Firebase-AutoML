@@ -50,7 +50,9 @@ dependencies {
     implementation 'com.google.firebase:firebase-ml-vision-image-label-model:18.0.0'
     implementation 'com.google.firebase:firebase-ml-vision-face-model:18.0.0'
     implementation 'com.google.firebase:firebase-ml-model-interpreter:21.0.0'
+    implementation 'com.google.firebase:firebase-ml-vision-automl:18.0.1'
 
     //material design
     implementation 'com.google.android.material:material:1.0.0'
+    implementation 'com.google.firebase:firebase-ml-vision-automl:18.0.1'
 }

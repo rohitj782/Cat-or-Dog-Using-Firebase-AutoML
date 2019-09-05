@@ -25,6 +25,11 @@ import com.google.firebase.ml.common.modeldownload.FirebaseModelDownloadConditio
 import com.google.firebase.ml.common.modeldownload.FirebaseModelManager
 import com.google.firebase.ml.common.modeldownload.FirebaseRemoteModel
 import com.google.firebase.ml.custom.*
+import com.google.firebase.ml.vision.FirebaseVision
+import com.google.firebase.ml.vision.common.FirebaseVisionImage
+import com.google.firebase.ml.vision.label.FirebaseVisionImageLabel
+import com.google.firebase.ml.vision.label.FirebaseVisionImageLabeler
+import com.google.firebase.ml.vision.label.FirebaseVisionOnDeviceAutoMLImageLabelerOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.IOException
 import java.io.InputStream
@@ -50,6 +55,7 @@ var mImageMaxHeight: Int? = null
  * An instance of the driver class to run model inference with Firebase.
  */
 var mInterpreter: FirebaseModelInterpreter? = null
+var labeler: FirebaseVisionImageLabeler? = null
 /**
  * Data configuration of input & output data of model.
  */
@@ -57,7 +63,7 @@ lateinit var mDataOptions: FirebaseModelInputOutputOptions
 /**
  * Name of the model file hosted with Firebase.
  */
-private val HOSTED_MODEL_NAME = "cat_or_dog"
+private val HOSTED_MODEL_NAME = "cat_or_dog_2019727221222"
 private val LOCAL_MODEL_ASSET = "cat_or_dog.tflite"
 /**
  * Name of the label file stored in Assets.
@@ -72,8 +78,8 @@ private val RESULTS_TO_SHOW = 1
  */
 private val DIM_BATCH_SIZE = 1
 private val DIM_PIXEL_SIZE = 3
-private val DIM_IMG_SIZE_X = 400
-private val DIM_IMG_SIZE_Y = 400
+private val DIM_IMG_SIZE_X = 200
+private val DIM_IMG_SIZE_Y = 200
 /**
  * Labels corresponding to the output of the vision model.
  */
@@ -115,7 +121,8 @@ class MainActivity : AppCompatActivity() {
         camera_view.setOnClickListener {
 
             mSelectedImage = camera_view.bitmap
-            runModelInference() }
+            runModelInference()
+        }
     }
 
     private lateinit var viewFinder: TextureView
@@ -228,11 +235,19 @@ class MainActivity : AppCompatActivity() {
             manager.registerRemoteModel(remoteModel)
             manager.registerLocalModel(localModel)
 
-            val modelOptions: FirebaseModelOptions = FirebaseModelOptions.Builder()
+//            val modelOptions: FirebaseModelOptions = FirebaseModelOptions.Builder()
+//                .setRemoteModelName(HOSTED_MODEL_NAME)
+//                .setLocalModelName("asset")
+//                .build()
+            val modelOptions = FirebaseVisionOnDeviceAutoMLImageLabelerOptions.Builder()
+                .setConfidenceThreshold(.6f)
                 .setRemoteModelName(HOSTED_MODEL_NAME)
                 .setLocalModelName("asset")
                 .build()
-            mInterpreter = FirebaseModelInterpreter.getInstance(modelOptions)!!
+            labeler = FirebaseVision.getInstance().getOnDeviceAutoMLImageLabeler(modelOptions)
+
+//            mInterpreter = FirebaseModelInterpreter.getInstance(modelOptions)!!
+
 
         } catch (e: FirebaseMLException) {
             showToast("Error while setting up the model")
@@ -243,60 +258,100 @@ class MainActivity : AppCompatActivity() {
 
     private fun runModelInference() {
         mGraphicOverlay.clear()
-        if (mInterpreter == null) {
+//        if (mInterpreter == null) {
+//            Log.e(TAG, "Image classifier has not been initialized; Skipped.")
+//            return
+//        }
+//        // Create input data.
+//        val imgData: ByteBuffer = convertBitmapToByteBuffer(mSelectedImage)
+//
+//        try {
+//            val inputs: FirebaseModelInputs = FirebaseModelInputs.Builder()
+//                .add(imgData).build()
+//            // Here's where the magic happens!!
+//            mInterpreter!!.run(inputs, mDataOptions)
+//                .addOnFailureListener {
+//                    it.printStackTrace()
+//                    showToast("Error running model inference")
+//                }
+//                .continueWith {
+//                    //                    Log.i(TAG,it.result!!.getOutput(0))
+//                    val labelProbArray: Array<ByteArray> = it.result!!.getOutput(0)
+//                    val topLabels: List<String> = getTopLabels(labelProbArray)
+//                    val labelGraphic: GraphicOverlay.Graphic =
+//                        LabelGraphic(mGraphicOverlay, topLabels)
+//                    mGraphicOverlay.add(labelGraphic)
+//                    return@continueWith topLabels
+//                }
+//        } catch (e: FirebaseMLException) {
+//            e.printStackTrace()
+//            showToast("Error  exception running model inference")
+//        }
+
+
+        if (labeler == null) {
             Log.e(TAG, "Image classifier has not been initialized; Skipped.")
             return
         }
-        // Create input data.
-        val imgData: ByteBuffer = convertBitmapToByteBuffer( mSelectedImage )
+        val image = FirebaseVisionImage.fromBitmap(mSelectedImage)
 
-        try {
-            val inputs: FirebaseModelInputs = FirebaseModelInputs.Builder()
-                .add(imgData).build()
-            // Here's where the magic happens!!
-            mInterpreter!!.run(inputs, mDataOptions)
-                .addOnFailureListener {
-                    it.printStackTrace()
-                    showToast("Error running model inference")
-                }
-                .continueWith {
-                    //                    Log.i(TAG,it.result!!.getOutput(0))
-                    val labelProbArray: Array<ByteArray> = it.result!!.getOutput(0)
-                    val topLabels: List<String> = getTopLabels(labelProbArray)
-                    val labelGraphic: GraphicOverlay.Graphic =
+        labeler!!.processImage(image).continueWith { task ->
+
+            val labelProbList = task.result
+
+            // Indicate whether the remote or local model is used.
+            // Note: in most common cases, once a remote model is downloaded it will be used. However, in
+            // very rare cases, the model itself might not be valid, and thus the local model is used. In
+            // addition, since model download failures can be transient, and model download can also be
+            // triggered in the background during inference, it is possible that a remote model is used
+            // even if the first download fails.
+            val textToShow =  if (labelProbList.isNullOrEmpty())
+                "No Result"
+            else
+                printTopKLabels(labelProbList)
+
+            var topLabels = listOf(textToShow)
+
+            Log.i("labels", textToShow)
+            val labelGraphic: GraphicOverlay.Graphic =
                         LabelGraphic(mGraphicOverlay, topLabels)
                     mGraphicOverlay.add(labelGraphic)
-                    return@continueWith topLabels
-                }
-        } catch (e: FirebaseMLException) {
-            e.printStackTrace()
-            showToast("Error  exception running model inference")
+
+            // print the results
+            textToShow
         }
 
+    }
 
+    /** Prints top-K labels, to be shown in UI as the results.  */
+    private val printTopKLabels: (List<FirebaseVisionImageLabel>) -> String = {
+        it.joinToString(
+            separator = "\n",
+            limit = RESULTS_TO_SHOW
+        ) { label ->
+            String.format(Locale.getDefault(), "Label: %s, Confidence: %4.2f", label.text, label.confidence)
+        }
     }
 
     @Synchronized
     private fun getTopLabels(labelProbArray: Array<ByteArray>): List<String> {
 
-        val result: ArrayList<String> = ArrayList<String>()
+        val result: ArrayList<String> = ArrayList()
 
-        for (i in labelProbArray.indices){
-            Log.i("labels","${(labelProbArray[0][i] and 0xff.toByte()) /255.0f}" )
-            val prob = (labelProbArray[0][i] and 0xff.toByte()) /255.0f
+        for (i in mLabelList!!.indices) {
 
-            if(prob<0){
-                result.add("CAT")
-            }else{
-                result.add("DOG")
-            }
+            Log.i(
+                "labels",
+                "${mLabelList?.get(i)}: ${(labelProbArray[0][i] / 255.0f)}"
+            )
+//            val prob = (labelProbArray[0][i] and 0xff.toByte()) / 255.0f
         }
 
 
-//        val catProb = (labelProbArray[0][0] and 0xff.toByte()) /255.0f
-//        val dogProb = (labelProbArray[0][1] and 0xff.toByte())/255.0f
-//        Log.i("labels","cat $catProb" )
-//        Log.i("labels","dog $dogProb" )
+//        val catProb = (labelProbArray[0][0] and 0xff.toByte()) / 255.0f
+//        val dogProb = (labelProbArray[0][1] and 0xff.toByte()) / 255.0f
+//        Log.i("labels", "cat: $catProb")
+//        Log.i("labels", "dog: $dogProb")
 
         return result
     }
@@ -339,6 +394,7 @@ class MainActivity : AppCompatActivity() {
     private fun showToast(message: String) {
         Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
     }
+
     /**
      * Reads label list from Assets.
      */
@@ -349,8 +405,9 @@ class MainActivity : AppCompatActivity() {
         try {
             inputStream = assetManager.open(LABEL_PATH)
             val s = Scanner(inputStream)
-            while(s.hasNext()){
-                labelList.add( s.nextLine() )
+            while (s.hasNext()) {
+//                Log.i("labelstxt",s.nextLine() )
+                labelList.add(s.nextLine())
             }
 
         } catch (e: IOException) {
@@ -358,7 +415,6 @@ class MainActivity : AppCompatActivity() {
         }
         return labelList
     }
-
 
 
 }

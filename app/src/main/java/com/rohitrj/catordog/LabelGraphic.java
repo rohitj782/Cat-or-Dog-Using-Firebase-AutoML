@@ -20,6 +20,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.text.TextPaint;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,26 +34,26 @@ public class LabelGraphic extends GraphicOverlay.Graphic {
 
     private List<String> labels;
 
-    LabelGraphic(GraphicOverlay overlay, List<String> labels) {
+    LabelGraphic(GraphicOverlay overlay, List<String> my_labels) {
         super(overlay);
         this.overlay = overlay;
-        this.labels = labels;
+        this.labels = my_labels;
         textPaint = new Paint();
         textPaint.setColor(Color.RED);
-        textPaint.setTextSize(80.0f);
+        textPaint.setTextSize(60.0f);
         bgPaint = new Paint();
         bgPaint.setColor(Color.WHITE);
-        bgPaint.setAlpha(70);
+        bgPaint.setAlpha(40);
     }
 
     @Override
     public synchronized void draw(Canvas canvas) {
-        float x = overlay.getWidth() / 2.0f;
+        float x = overlay.getWidth() / 6.0f;
         float y = overlay.getHeight() / 2.0f;
 
         for (String label : labels) {
             drawTextWithBackground(label, x, y, new TextPaint(textPaint), bgPaint, canvas);
-            y = y - 42.0f;
+            y = y - 95.0f;
         }
     }
 
