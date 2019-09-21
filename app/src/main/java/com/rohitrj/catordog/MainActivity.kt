@@ -240,10 +240,11 @@ class MainActivity : AppCompatActivity() {
 //                .setLocalModelName("asset")
 //                .build()
             val modelOptions = FirebaseVisionOnDeviceAutoMLImageLabelerOptions.Builder()
-                .setConfidenceThreshold(.6f)
+                .setConfidenceThreshold(.8f)
                 .setRemoteModelName(HOSTED_MODEL_NAME)
                 .setLocalModelName("asset")
                 .build()
+                
             labeler = FirebaseVision.getInstance().getOnDeviceAutoMLImageLabeler(modelOptions)
 
 //            mInterpreter = FirebaseModelInterpreter.getInstance(modelOptions)!!
